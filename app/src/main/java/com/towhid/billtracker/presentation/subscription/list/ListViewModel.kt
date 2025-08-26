@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.towhid.billtracker.UiEvent
 import com.towhid.billtracker.UiState
-import com.towhid.billtracker.data.repository.RateCache
+import com.towhid.billtracker.data.repository.ConverterRepository
 import com.towhid.billtracker.domain.model.BillingCycleType
 import com.towhid.billtracker.domain.model.Subscription
 import com.towhid.billtracker.domain.usecase.DeleteSubscriptionUseCase
@@ -23,13 +23,12 @@ class ListViewModel(
     private val upsert: UpsertSubscriptionUseCase,
     private val delete: DeleteSubscriptionUseCase,
     private val prefs: UserPrefs,
-    private val rateCache: RateCache? = null
+    private val repository: ConverterRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ListState())
     val state: StateFlow<ListState> = _state
 
-    private var cachedRates = rateCache?.get()
 
     init {
         viewModelScope.launch {
@@ -44,7 +43,6 @@ class ListViewModel(
                 recalculateTotal()
             }
         }
-        viewModelScope.launch { refreshRatesIfNeeded() }
     }
 
     fun onEvent(event: ListEvent) {
@@ -53,35 +51,33 @@ class ListViewModel(
             is ListEvent.Delete -> delete(event.id)
             is ListEvent.ChangeFilter -> _state.update { it.copy(filter = event.filter) }
             is ListEvent.ChangeSort -> _state.update { it.copy(sort = event.sortBy) }
-            is ListEvent.RefreshRates -> viewModelScope.launch { refreshRatesIfNeeded() }
+            is ListEvent.Convert -> {
+                viewModelScope.launch {
+                    _state.update { it.copy(isLoading = true, error = null) }
+                    try {
+                        val converted = repository.convert(event.from, event.to, event.amount)
+                        _state.update {
+                            it.copy(
+                                isLoading = false,
+                                convertedTotal = converted
+                            )
+                        }
+                    } catch (t: Throwable) {
+                        _state.update {
+                            it.copy(
+                                isLoading = false,
+                                error = "Conversion failed: ${t.message}"
+                            )
+                        }
+                    }
+                }
+            }
         }
-    }
-
-    private suspend fun refreshRatesIfNeeded() {
-        _state.update { it.copy(isLoading = true, error = null) }
-        try {
-            print("Api call")
-            cachedRates = rateCache?.refresh(_state.value.preferredCurrency)
-            _state.update { it.copy(isLoading = false, ratesDate = cachedRates?.date) }
-        } catch (t: Throwable) {
-            cachedRates = rateCache?.get()
-            _state.update { it.copy(isLoading = false, error = "Network error, using cached rates", ratesDate = cachedRates?.date) }
-        }
-        recalculateTotal()
-    }
-
-    private fun convert(amount: Double, from: String, to: String): Double {
-        val rates = cachedRates?.rates ?: return amount
-        val base = cachedRates?.base ?: return amount
-        if (from == to) return amount
-        val rateFrom = if (from == base) 1.0 else rates[from] ?: return amount
-        val rTo = if (to == base) 1.0 else rates[to] ?: return amount
-        return (amount / rateFrom) * rTo
     }
 
     private fun recalculateTotal() {
         val subtotal = _state.value
-        val sum = subtotal.items.sumOf { convert(it.amount, it.currency, subtotal.preferredCurrency) }
+        val sum = subtotal.items.sumOf {  it.amount}
         _state.update { it.copy(totalInPreferred = sum) }
     }
 
@@ -128,15 +124,16 @@ sealed interface ListEvent : UiEvent {
     data class Delete(val id: Long) : ListEvent
     data class ChangeFilter(val filter: Filter) : ListEvent
     data class ChangeSort(val sortBy: SortBy) : ListEvent
-    object RefreshRates : ListEvent
+    data class Convert (val from: String, val to: String, val amount: Double): ListEvent
 }
 
 data class ListState(
     val items: List<Subscription> = emptyList(),
     val filter: Filter = Filter.ALL,
     val sort: SortBy = SortBy.NEXT_DUE_ASC,
-    val preferredCurrency: String = "USD",
+    val preferredCurrency: String = "BDT",
     val totalInPreferred: Double = 0.0,
+    val convertedTotal: Double = 0.0,
     val ratesDate: String? = null,
     val isLoading: Boolean = false,
     val error: String? = null

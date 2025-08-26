@@ -3,9 +3,10 @@ package com.towhid.billtracker.di
 import android.app.Application
 import androidx.room.Room
 import com.squareup.moshi.Moshi
+import com.towhid.billtracker.BuildConfig
 import com.towhid.billtracker.data.local.AppDatabase
 import com.towhid.billtracker.data.remote.ExchangeApi
-import com.towhid.billtracker.data.repository.RateCache
+import com.towhid.billtracker.data.repository.ConverterRepository
 import com.towhid.billtracker.data.repository.SubscriptionRepositoryImpl
 import com.towhid.billtracker.domain.repository.SubscriptionRepository
 import com.towhid.billtracker.domain.usecase.DeleteSubscriptionUseCase
@@ -33,8 +34,20 @@ val appModule = module {
     single { get<AppDatabase>().subscriptionDao() }
 
     single {
-        val logger = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
-        OkHttpClient.Builder().addInterceptor(logger).build()
+        val logger = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
+        OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val originalRequest = chain.request()
+                val newUrl = originalRequest.url.newBuilder()
+                    .addQueryParameter("access_key", BuildConfig.API_KEY)
+                    .build()
+                val newRequest = originalRequest.newBuilder()
+                    .url(newUrl)
+                    .build()
+                chain.proceed(newRequest)
+            }
+            .addInterceptor(logger)
+            .build()
     }
     single {
         val moshi = Moshi.Builder().build()
@@ -45,7 +58,7 @@ val appModule = module {
             .build()
             .create(ExchangeApi::class.java)
     }
-    single { RateCache(get()) }
+    single { ConverterRepository(get()) }
 
     // Repos
     single<SubscriptionRepository> { SubscriptionRepositoryImpl(get()) }
@@ -57,6 +70,6 @@ val appModule = module {
     single { GetByIdUseCase(get()) }
 
     // ViewModels
-    viewModel { ListViewModel(get(), get(), get(), get()) }
+    viewModel { ListViewModel(get(), get(), get(), get(), get()) }
     viewModel { EditViewModel(get(), get()) }
 }

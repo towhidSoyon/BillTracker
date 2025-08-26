@@ -13,7 +13,7 @@ class UserPrefs(private val context: Context) {
     private val KEY_CURRENCY = stringPreferencesKey("preferred_currency")
 
     val preferredCurrency: Flow<String> = context.dataStore.data.map { prefs ->
-        prefs[KEY_CURRENCY] ?: "USD"
+        prefs[KEY_CURRENCY] ?: "BDT"
     }
 
     suspend fun setPreferredCurrency(code: String) {
