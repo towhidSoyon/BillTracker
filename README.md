@@ -82,7 +82,7 @@ Other->
 - Currency conversion depends on API response – fallback cache ensures offline support.
 
 
-🧑‍💻 Author
-Towhidul Islam
-Mobile App Developer
+🧑‍💻 Author:
+Towhidul Islam,
+Mobile App Developer,
 💻 Kotlin | Jetpack Compose | KMP
