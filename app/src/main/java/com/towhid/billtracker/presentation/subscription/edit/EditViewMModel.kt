@@ -2,11 +2,8 @@ package com.towhid.billtracker.presentation.subscription.edit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.towhid.billtracker.UiEvent
-import com.towhid.billtracker.UiState
 import com.towhid.billtracker.domain.model.BillingCycleType
 import com.towhid.billtracker.domain.model.Subscription
-import com.towhid.billtracker.domain.usecase.GetAllSubscriptionsUseCase
 import com.towhid.billtracker.domain.usecase.GetByIdUseCase
 import com.towhid.billtracker.domain.usecase.UpsertSubscriptionUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,29 +20,29 @@ class EditViewModel(
     private val _state = MutableStateFlow(EditState())
     val state: StateFlow<EditState> = _state.asStateFlow()
 
-    fun onEvent(event: EditEvent) {
-        when (event) {
-            is EditEvent.Load -> load(event.id)
-            is EditEvent.NameChanged -> _state.update { it.copy(name = event.name) }
+    fun onAction(action: EditAction) {
+        when (action) {
+            is EditAction.Load -> load(action.id)
+            is EditAction.NameChanged -> _state.update { it.copy(name = action.name) }
                 .also { validate() }
 
-            is EditEvent.AmountChanged -> _state.update { it.copy(amount = event.amount) }
+            is EditAction.AmountChanged -> _state.update { it.copy(amount = action.amount) }
                 .also { validate() }
 
-            is EditEvent.CurrencyChanged -> _state.update { it.copy(currency = event.currency) }
+            is EditAction.CurrencyChanged -> _state.update { it.copy(currency = action.currency) }
                 .also { validate() }
 
-            is EditEvent.CycleChanged -> _state.update { it.copy(cycle = event.cycle) }
+            is EditAction.CycleChanged -> _state.update { it.copy(cycle = action.cycle) }
                 .also { validate() }
 
-            is EditEvent.CustomDaysChanged -> _state.update { it.copy(customDays = event.day) }
+            is EditAction.CustomDaysChanged -> _state.update { it.copy(customDays = action.day) }
                 .also { validate() }
 
-            is EditEvent.NextDueChanged -> _state.update { it.copy(nextDue = event.dueDate) }
+            is EditAction.NextDueChanged -> _state.update { it.copy(nextDue = action.dueDate) }
                 .also { validate() }
 
-            is EditEvent.NotesChanged -> _state.update { it.copy(notes = event.note) }
-            is EditEvent.Save -> save()
+            is EditAction.NotesChanged -> _state.update { it.copy(notes = action.note) }
+            is EditAction.Save -> save()
         }
     }
 
@@ -53,41 +50,41 @@ class EditViewModel(
         _state.update { it.copy(id = id) }
         if (id == -1L) return
         viewModelScope.launch {
-            val existing =  getById(id)
+            val existing = getById(id)
             _state.update {
                 it.copy(
                     id = existing?.id ?: 0L,
-                    name = existing?.name?: "",
-                    
-                )
+                    name = existing?.name ?: "",
+                    amount = existing?.amount.toString()
+                    )
             }
         }
     }
 
     private fun validate() {
-        val st = _state.value
-        val valid = st.name.isNotBlank() && st.amount.toDoubleOrNull() != null && runCatching {
-            LocalDate.parse(st.nextDue)
+        val item = _state.value
+        val valid = item.name.isNotBlank() && item.amount.toDoubleOrNull() != null && runCatching {
+            LocalDate.parse(item.nextDue)
         }.isSuccess &&
-                (st.cycle != BillingCycleType.CUSTOM || st.customDays.toIntOrNull()
+                (item.cycle != BillingCycleType.CUSTOM || item.customDays.toIntOrNull()
                     ?.let { it > 0 } == true)
         _state.update { it.copy(isValid = valid) }
     }
 
     private fun save() {
-        val st = _state.value
-        if (!st.isValid) return
+        val item = _state.value
+        if (!item.isValid) return
         viewModelScope.launch {
             _state.update { it.copy(isSaving = true, error = null) }
             val item = Subscription(
-                id = if (st.id == -1L) 0L else st.id,
-                name = st.name,
-                amount = st.amount.toDouble(),
-                currency = st.currency.uppercase(),
-                cycle = st.cycle,
-                customDays = st.customDays.toIntOrNull(),
-                nextDue = LocalDate.parse(st.nextDue),
-                notes = st.notes
+                id = if (item.id == -1L) 0L else item.id,
+                name = item.name,
+                amount = item.amount.toDouble(),
+                currency = item.currency.uppercase(),
+                cycle = item.cycle,
+                customDays = item.customDays.toIntOrNull(),
+                nextDue = LocalDate.parse(item.nextDue),
+                notes = item.notes
             )
             try {
                 upsert(item)
@@ -99,16 +96,16 @@ class EditViewModel(
     }
 }
 
-sealed interface EditEvent : UiEvent {
-    data class Load(val id: Long) : EditEvent
-    data class NameChanged(val name: String) : EditEvent
-    data class AmountChanged(val amount: String) : EditEvent
-    data class CurrencyChanged(val currency: String) : EditEvent
-    data class CycleChanged(val cycle: BillingCycleType) : EditEvent
-    data class CustomDaysChanged(val day: String) : EditEvent
-    data class NextDueChanged(val dueDate: String) : EditEvent
-    data class NotesChanged(val note: String) : EditEvent
-    object Save : EditEvent
+sealed class EditAction {
+    data class Load(val id: Long) : EditAction()
+    data class NameChanged(val name: String) : EditAction()
+    data class AmountChanged(val amount: String) : EditAction()
+    data class CurrencyChanged(val currency: String) : EditAction()
+    data class CycleChanged(val cycle: BillingCycleType) : EditAction()
+    data class CustomDaysChanged(val day: String) : EditAction()
+    data class NextDueChanged(val dueDate: String) : EditAction()
+    data class NotesChanged(val note: String) : EditAction()
+    object Save : EditAction()
 }
 
 data class EditState(
@@ -123,4 +120,4 @@ data class EditState(
     val isValid: Boolean = false,
     val isSaving: Boolean = false,
     val error: String? = null
-) : UiState
+)

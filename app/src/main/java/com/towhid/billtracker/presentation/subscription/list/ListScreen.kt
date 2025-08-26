@@ -1,5 +1,6 @@
 package com.towhid.billtracker.presentation.subscription.list
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,14 +13,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -33,19 +32,40 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.towhid.billtracker.domain.model.Subscription
 import com.towhid.billtracker.presentation.subscription.components.SubscriptionItem
-import org.koin.androidx.compose.getViewModel
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListScreen(onAdd: () -> Unit, onEdit: (Long) -> Unit) {
     val viewModel: ListViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
 
+    ListScreenContent(
+        state = state,
+        onAdd = onAdd,
+        onEdit = onEdit,
+        list = viewModel.visibleItems()
+    ) {
+        viewModel.onAction(it)
+    }
+
+}
+
+
+@SuppressLint("DefaultLocale")
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ListScreenContent(
+    state: ListState,
+    onAdd: () -> Unit,
+    onEdit: (Long) -> Unit,
+    list: List<Subscription> = emptyList(),
+    onAction: (ListAction) -> Unit
+) {
     LaunchedEffect(state.totalInPreferred) {
-        viewModel.onEvent(
-            ListEvent.Convert(
+        onAction(
+            ListAction.Convert(
                 "USD",
                 "BDT",
                 state.totalInPreferred
@@ -88,22 +108,22 @@ fun ListScreen(onAdd: () -> Unit, onEdit: (Long) -> Unit) {
                         modifier = Modifier.padding(12.dp)
                     )
                     AssistChip(onClick = {
-                        viewModel.onEvent(
-                            ListEvent.Convert(
+                        onAction(
+                            ListAction.Convert(
                                 "USD",
                                 "BDT",
                                 state.totalInPreferred
                             )
                         )
                     }, label = { Text("Convert to BDT") })
+                    val formatted = String.format("%.2f", state.convertedTotal)
                     Text(
-                        "Total: ${state.convertedTotal} BDT", modifier = Modifier.padding(12.dp)
+                        "Total: $formatted BDT", modifier = Modifier.padding(12.dp)
                     )
                 }
             }
 
 
-            // filters
             Row(
                 Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -112,8 +132,8 @@ fun ListScreen(onAdd: () -> Unit, onEdit: (Long) -> Unit) {
                     FilterChip(
                         selected = state.filter.ordinal == idx,
                         onClick = {
-                            viewModel.onEvent(
-                                ListEvent.ChangeFilter(
+                            onAction(
+                                ListAction.ChangeFilter(
                                     when (idx) {
                                         0 -> Filter.ALL
                                         1 -> Filter.DUE_SOON
@@ -127,19 +147,23 @@ fun ListScreen(onAdd: () -> Unit, onEdit: (Long) -> Unit) {
                 }
             }
 
-            val items = viewModel.visibleItems()
+            val items = list
             if (items.isEmpty()) {
                 Box(
                     Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) { Text("No Items Here.") }
             } else {
-                LazyColumn(Modifier.fillMaxSize().padding(horizontal = 4.dp)) {
+                LazyColumn(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 4.dp)
+                ) {
                     items(items, key = { it.id }) { item ->
                         SubscriptionItem(
                             subscription = item,
-                            onMarkPaid = { viewModel.onEvent(ListEvent.MarkPaid(it.id)) },
-                            onDelete = { viewModel.onEvent(ListEvent.Delete(it.id)) },
+                            onMarkPaid = { onAction(ListAction.MarkPaid(it.id)) },
+                            onDelete = { onAction(ListAction.Delete(it.id)) },
                             onClick = { onEdit(it.id) })
                     }
                 }

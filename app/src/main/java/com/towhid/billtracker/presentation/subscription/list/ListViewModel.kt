@@ -2,8 +2,6 @@ package com.towhid.billtracker.presentation.subscription.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.towhid.billtracker.UiEvent
-import com.towhid.billtracker.UiState
 import com.towhid.billtracker.data.repository.ConverterRepository
 import com.towhid.billtracker.domain.model.BillingCycleType
 import com.towhid.billtracker.domain.model.Subscription
@@ -45,17 +43,17 @@ class ListViewModel(
         }
     }
 
-    fun onEvent(event: ListEvent) {
-        when (event) {
-            is ListEvent.MarkPaid -> markPaid(event.id)
-            is ListEvent.Delete -> delete(event.id)
-            is ListEvent.ChangeFilter -> _state.update { it.copy(filter = event.filter) }
-            is ListEvent.ChangeSort -> _state.update { it.copy(sort = event.sortBy) }
-            is ListEvent.Convert -> {
+    fun onAction(action: ListAction) {
+        when (action) {
+            is ListAction.MarkPaid -> markPaid(action.id)
+            is ListAction.Delete -> delete(action.id)
+            is ListAction.ChangeFilter -> _state.update { it.copy(filter = action.filter) }
+            is ListAction.ChangeSort -> _state.update { it.copy(sort = action.sortBy) }
+            is ListAction.Convert -> {
                 viewModelScope.launch {
                     _state.update { it.copy(isLoading = true, error = null) }
                     try {
-                        val converted = repository.convert(event.from, event.to, event.amount)
+                        val converted = repository.convert(action.from, action.to, action.amount)
                         _state.update {
                             it.copy(
                                 isLoading = false,
@@ -119,12 +117,12 @@ class ListViewModel(
 enum class Filter { ALL, DUE_SOON, OVERDUE }
 enum class SortBy { NEXT_DUE_ASC, AMOUNT_DESC }
 
-sealed interface ListEvent : UiEvent {
-    data class MarkPaid(val id: Long) : ListEvent
-    data class Delete(val id: Long) : ListEvent
-    data class ChangeFilter(val filter: Filter) : ListEvent
-    data class ChangeSort(val sortBy: SortBy) : ListEvent
-    data class Convert (val from: String, val to: String, val amount: Double): ListEvent
+sealed class ListAction {
+    data class MarkPaid(val id: Long) : ListAction()
+    data class Delete(val id: Long) : ListAction()
+    data class ChangeFilter(val filter: Filter) : ListAction()
+    data class ChangeSort(val sortBy: SortBy) : ListAction()
+    data class Convert (val from: String, val to: String, val amount: Double): ListAction()
 }
 
 data class ListState(
@@ -137,4 +135,4 @@ data class ListState(
     val ratesDate: String? = null,
     val isLoading: Boolean = false,
     val error: String? = null
-) : UiState
+)
