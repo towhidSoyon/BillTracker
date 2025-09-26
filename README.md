@@ -84,6 +84,10 @@ Other->
 <p align="center">
   <img src="assets/screen_1.png" alt="Login Screen" width="300"/>
   <img src="assets/screen_2.png" alt="Posts Screen" width="300"/>
+  <img src="assets/screen_3.png" alt="Login Screen" width="300"/>
+  <img src="assets/screen_4.png" alt="Posts Screen" width="300"/>
+  <img src="assets/screen_5.png" alt="Login Screen" width="300"/>
+  <img src="assets/screen_6.png" alt="Login Screen" width="300"/>
 </p>
 
 
