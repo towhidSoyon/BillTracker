@@ -81,8 +81,10 @@ Other->
 - Napier logger – better multiplatform logging than Timber.
 - Currency conversion depends on API response – fallback cache ensures offline support.
 
-![Login Screen](assets/screen_1.png)
-![Posts Screen](assets/screen_2.png)
+<p align="center">
+  <img src="assets/screen_1.png" alt="Login Screen" width="300"/>
+  <img src="assets/screen_2.png" alt="Posts Screen" width="300"/>
+</p>
 
 
 🧑‍💻 Author:
