@@ -82,12 +82,12 @@ Other->
 - Currency conversion depends on API response – fallback cache ensures offline support.
 
 <p align="center">
-  <img src="assets/screen_1.png" alt="Login Screen" width="300"/>
-  <img src="assets/screen_2.png" alt="Posts Screen" width="300"/>
-  <img src="assets/screen_3.png" alt="Login Screen" width="300"/>
-  <img src="assets/screen_4.png" alt="Posts Screen" width="300"/>
-  <img src="assets/screen_5.png" alt="Login Screen" width="300"/>
-  <img src="assets/screen_6.png" alt="Login Screen" width="300"/>
+  <img src="assets/screen_1.png" alt="Login Screen" width="200"/>
+  <img src="assets/screen_2.png" alt="Posts Screen" width="200"/>
+  <img src="assets/screen_3.png" alt="Login Screen" width="200"/>
+  <img src="assets/screen_4.png" alt="Posts Screen" width="200"/>
+  <img src="assets/screen_5.png" alt="Login Screen" width="200"/>
+  <img src="assets/screen_6.png" alt="Login Screen" width="200"/>
 </p>
 
 
